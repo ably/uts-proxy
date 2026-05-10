@@ -52,8 +52,8 @@ func (s *Server) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Port <= 0 {
-		writeError(w, http.StatusBadRequest, "port is required and must be positive")
+	if req.Port < 0 {
+		writeError(w, http.StatusBadRequest, "port must be non-negative (0 for auto-assign)")
 		return
 	}
 
@@ -79,14 +79,14 @@ func (s *Server) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 	session := &Session{
 		ID:        GenerateID(),
 		Target:    req.Target,
-		Port:      req.Port,
 		Rules:     rules,
 		EventLog:  NewEventLog(),
 		timeoutMs: timeoutMs,
 	}
 
-	// Attempt to bind the port
-	if err := StartSessionListener(session, req.Port); err != nil {
+	// Attempt to bind the port (port 0 means auto-assign)
+	actualPort, err := StartSessionListener(session, req.Port)
+	if err != nil {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
@@ -102,13 +102,13 @@ func (s *Server) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 	resp := CreateSessionResponse{
 		SessionID: session.ID,
 		Proxy: ProxyConfig{
-			Host: fmt.Sprintf("localhost:%d", req.Port),
-			Port: req.Port,
+			Host: fmt.Sprintf("localhost:%d", actualPort),
+			Port: actualPort,
 		},
 	}
 
 	log.Printf("created session %s on port %d (timeout %dms, %d rules)",
-		session.ID, req.Port, timeoutMs, len(rules))
+		session.ID, actualPort, timeoutMs, len(rules))
 
 	writeJSON(w, http.StatusCreated, resp)
 }

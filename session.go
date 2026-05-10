@@ -257,7 +257,7 @@ type CreateSessionRequest struct {
 	Target    TargetConfig    `json:"target"`
 	Rules     json.RawMessage `json:"rules,omitempty"`
 	TimeoutMs int             `json:"timeoutMs,omitempty"`
-	Port      int             `json:"port"`
+	Port      int             `json:"port,omitempty"`
 }
 
 // CreateSessionResponse is the JSON response for POST /sessions.
