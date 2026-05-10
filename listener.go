@@ -10,16 +10,19 @@ import (
 
 // StartSessionListener binds the given port and starts an HTTP server
 // that routes WebSocket upgrades to WsProxyHandler and other HTTP requests
-// to HttpProxyHandler. Returns an error if the port cannot be bound.
-func StartSessionListener(session *Session, port int) error {
+// to HttpProxyHandler. If port is 0, the OS assigns a free port.
+// Returns the actual bound port and any error.
+func StartSessionListener(session *Session, port int) (int, error) {
 	addr := fmt.Sprintf(":%d", port)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		return fmt.Errorf("failed to bind port %d: %w", port, err)
+		return 0, fmt.Errorf("failed to bind port %d: %w", port, err)
 	}
+	actualPort := listener.Addr().(*net.TCPAddr).Port
 
 	session.mu.Lock()
 	session.listener = listener
+	session.Port = actualPort
 	session.mu.Unlock()
 
 	mux := http.NewServeMux()
@@ -37,7 +40,7 @@ func StartSessionListener(session *Session, port int) error {
 
 	go func() {
 		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
-			log.Printf("session %s listener on port %d closed: %v", session.ID, port, err)
+			log.Printf("session %s listener on port %d closed: %v", session.ID, actualPort, err)
 		}
 	}()
 
@@ -46,7 +49,7 @@ func StartSessionListener(session *Session, port int) error {
 	session.Server = server
 	session.mu.Unlock()
 
-	return nil
+	return actualPort, nil
 }
 
 // StopSessionListener gracefully shuts down the per-session HTTP server and closes the listener.

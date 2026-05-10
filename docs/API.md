@@ -40,7 +40,7 @@ Creates a new test session, binds the specified port, and starts proxying.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `port` | integer | yes | TCP port for the session's proxy listener |
+| `port` | integer | no | TCP port for the session's proxy listener. If omitted or `0`, a free port is auto-assigned. |
 | `target` | object | yes | Upstream hosts (at least one of `realtimeHost` or `restHost`) |
 | `target.realtimeHost` | string | no | Upstream WebSocket host (e.g. `sandbox-realtime.ably.io`) |
 | `target.restHost` | string | no | Upstream REST host (e.g. `sandbox-rest.ably.io`) |

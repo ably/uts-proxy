@@ -1089,11 +1089,14 @@ func TestCreateSessionValidation(t *testing.T) {
 	controlURL, _, cleanup := startControlServer(t)
 	defer cleanup()
 
-	// Missing port
-	body, _ := json.Marshal(CreateSessionRequest{Target: TargetConfig{RealtimeHost: "localhost:1234"}})
+	// Negative port
+	body, _ := json.Marshal(map[string]interface{}{
+		"target": map[string]string{"realtimeHost": "localhost:1234"},
+		"port":   -1,
+	})
 	resp, _ := http.Post(controlURL+"/sessions", "application/json", bytes.NewReader(body))
 	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 400 for missing port, got %d", resp.StatusCode)
+		t.Fatalf("expected 400 for negative port, got %d", resp.StatusCode)
 	}
 	resp.Body.Close()
 
@@ -1104,6 +1107,31 @@ func TestCreateSessionValidation(t *testing.T) {
 		t.Fatalf("expected 400 for missing target, got %d", resp2.StatusCode)
 	}
 	resp2.Body.Close()
+}
+
+func TestSessionAutoPort(t *testing.T) {
+	controlURL, _, cleanup := startControlServer(t)
+	defer cleanup()
+
+	session := createSession(t, controlURL, CreateSessionRequest{
+		Target: TargetConfig{RealtimeHost: "localhost:1234"},
+	})
+	defer deleteSession(t, controlURL, session.SessionID)
+
+	if session.Proxy.Port <= 0 {
+		t.Fatalf("expected auto-assigned port > 0, got %d", session.Proxy.Port)
+	}
+	expectedHost := fmt.Sprintf("localhost:%d", session.Proxy.Port)
+	if session.Proxy.Host != expectedHost {
+		t.Fatalf("expected host %s, got %s", expectedHost, session.Proxy.Host)
+	}
+
+	// Verify the port is actually listening
+	conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", session.Proxy.Port))
+	if err != nil {
+		t.Fatalf("auto-assigned port %d should be listening: %v", session.Proxy.Port, err)
+	}
+	conn.Close()
 }
 
 // -- Msgpack test helper --
