@@ -30,6 +30,9 @@ const (
 	ActionMessage      = 15
 	ActionSync         = 16
 	ActionAuth         = 17
+	ActionObject       = 19
+	ActionObjectSync   = 20
+	ActionAnnotation   = 21
 )
 
 var actionNames = map[string]int{
@@ -51,6 +54,9 @@ var actionNames = map[string]int{
 	"MESSAGE":      ActionMessage,
 	"SYNC":         ActionSync,
 	"AUTH":         ActionAuth,
+	"OBJECT":       ActionObject,
+	"OBJECT_SYNC":  ActionObjectSync,
+	"ANNOTATION":   ActionAnnotation,
 }
 
 var actionNumbers = map[int]string{}
