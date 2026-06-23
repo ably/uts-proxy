@@ -28,6 +28,10 @@ func HandleWsProxy(session *Session, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Protocol format ("json" or "msgpack") is declared by the SDK via the
+	// "format" query param and is fixed for the lifetime of the connection.
+	format := queryParams["format"]
+
 	// Create WsConnection and register it
 	wc := NewWsConnection(0)
 	session.AddWsConn(wc)
@@ -142,13 +146,13 @@ func HandleWsProxy(session *Session, w http.ResponseWriter, r *http.Request) {
 	// server → client relay
 	go func() {
 		defer wg.Done()
-		relayFrames(session, wc, serverConn, clientConn, "server_to_client", "ws_frame_to_client")
+		relayFrames(session, wc, serverConn, clientConn, "server_to_client", "ws_frame_to_client", format)
 	}()
 
 	// client → server relay
 	go func() {
 		defer wg.Done()
-		relayFrames(session, wc, clientConn, serverConn, "client_to_server", "ws_frame_to_server")
+		relayFrames(session, wc, clientConn, serverConn, "client_to_server", "ws_frame_to_server", format)
 	}()
 
 	wg.Wait()
@@ -163,7 +167,7 @@ func HandleWsProxy(session *Session, w http.ResponseWriter, r *http.Request) {
 }
 
 // relayFrames reads frames from src and writes to dst, applying rules.
-func relayFrames(session *Session, wc *WsConnection, src, dst *websocket.Conn, direction, matchType string) {
+func relayFrames(session *Session, wc *WsConnection, src, dst *websocket.Conn, direction, matchType, format string) {
 	for {
 		if wc.IsClosed() {
 			return
@@ -202,11 +206,11 @@ func relayFrames(session *Session, wc *WsConnection, src, dst *websocket.Conn, d
 		}
 
 		// Parse protocol message for rule matching and logging
-		pm := ParseProtocolMessage(data, msgType)
+		pm := ParseProtocolMessage(data, format)
 
 		// Log the frame (as JSON for readability, even if binary)
 		var logMsg json.RawMessage
-		if msgType == websocket.TextMessage {
+		if format != "msgpack" {
 			logMsg = json.RawMessage(data)
 		} else {
 			// For binary frames, log the parsed summary
