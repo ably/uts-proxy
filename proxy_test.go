@@ -315,7 +315,7 @@ func TestWsPassthrough(t *testing.T) {
 	defer deleteSession(t, controlURL, session.SessionID)
 
 	// Connect through proxy
-	conn := connectWs(t, fmt.Sprintf("localhost:%d", port), "key=test.key:secret")
+	conn := connectWs(t, fmt.Sprintf("localhost:%d", port), "format=json", "key=test.key:secret")
 	defer conn.Close()
 
 	// Should receive CONNECTED from mock upstream
@@ -467,7 +467,7 @@ func TestWsFrameSuppression(t *testing.T) {
 	})
 	defer deleteSession(t, controlURL, session.SessionID)
 
-	conn := connectWs(t, fmt.Sprintf("localhost:%d", port))
+	conn := connectWs(t, fmt.Sprintf("localhost:%d", port), "format=json")
 	defer conn.Close()
 
 	// Read CONNECTED
@@ -515,7 +515,7 @@ func TestWsInjectAndClose(t *testing.T) {
 	})
 	defer deleteSession(t, controlURL, session.SessionID)
 
-	conn := connectWs(t, fmt.Sprintf("localhost:%d", port))
+	conn := connectWs(t, fmt.Sprintf("localhost:%d", port), "format=json")
 	defer conn.Close()
 
 	// Should receive the injected DISCONNECTED message
@@ -672,7 +672,7 @@ func TestWsSuppressOnwards(t *testing.T) {
 	})
 	defer deleteSession(t, controlURL, session.SessionID)
 
-	conn := connectWs(t, fmt.Sprintf("localhost:%d", port))
+	conn := connectWs(t, fmt.Sprintf("localhost:%d", port), "format=json")
 	defer conn.Close()
 
 	// Read CONNECTED (arrives before suppress_onwards fires)
@@ -854,7 +854,7 @@ func TestRuleTimesLimit(t *testing.T) {
 
 func TestProtocolParseJSON(t *testing.T) {
 	msg := `{"action":10,"channel":"test-channel"}`
-	pm := ParseProtocolMessage([]byte(msg), websocket.TextMessage)
+	pm := ParseProtocolMessage([]byte(msg), "json")
 	if pm.Action != ActionAttach {
 		t.Fatalf("expected action %d, got %d", ActionAttach, pm.Action)
 	}
@@ -865,7 +865,7 @@ func TestProtocolParseJSON(t *testing.T) {
 
 func TestProtocolParseJSONWithError(t *testing.T) {
 	msg := `{"action":9,"error":{"code":40142,"statusCode":401,"message":"Token expired"}}`
-	pm := ParseProtocolMessage([]byte(msg), websocket.TextMessage)
+	pm := ParseProtocolMessage([]byte(msg), "json")
 	if pm.Action != ActionError {
 		t.Fatalf("expected action %d, got %d", ActionError, pm.Action)
 	}
@@ -885,7 +885,7 @@ func TestProtocolParseMsgpack(t *testing.T) {
 		"channel": "test",
 	}
 	data := mustMarshalMsgpack(t, raw)
-	pm := ParseProtocolMessage(data, websocket.BinaryMessage)
+	pm := ParseProtocolMessage(data, "msgpack")
 	if pm.Action != ActionAttach {
 		t.Fatalf("expected action %d, got %d", ActionAttach, pm.Action)
 	}

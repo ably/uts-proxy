@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gorilla/websocket"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -99,16 +98,15 @@ type ErrorInfo struct {
 }
 
 // ParseProtocolMessage decodes a WebSocket frame into a ProtocolMessage.
-// For text frames (JSON) and binary frames (msgpack).
+// The format is taken from the connection's "format" query parameter:
+// "msgpack" is decoded as msgpack, everything else (including "json" and an
+// absent value) is decoded as JSON.
 // Returns the parsed message. On failure, returns a message with Action=-1.
-func ParseProtocolMessage(data []byte, messageType int) ProtocolMessage {
-	if messageType == websocket.TextMessage {
-		return parseJSON(data)
-	}
-	if messageType == websocket.BinaryMessage {
+func ParseProtocolMessage(data []byte, format string) ProtocolMessage {
+	if format == "msgpack" {
 		return parseMsgpack(data)
 	}
-	return ProtocolMessage{Action: -1}
+	return parseJSON(data)
 }
 
 func parseJSON(data []byte) ProtocolMessage {
